@@ -1,0 +1,46 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Database
+state/agent.db
+state/agent.db-*
+
+# Security reports
+reports/security/*.json
+!reports/security/.gitkeep
+
+# Logs
+logs/
+!logs/.gitkeep
+
+# Reports (keep structure)
+reports/daily/
+reports/weekly/
+reports/jobs/
+!reports/*/.gitkeep
+
+# Virtual environments
+venv/
+env/
+.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test artifacts
+test_actions.json
+*.pyc
+
+# Build
+dist/
+build/
+*.egg-info
