@@ -1,0 +1,39 @@
+name: sqlite
+description: SQLite database operations for state persistence
+version: 1.0
+tools:
+  - name: execute
+    description: Execute a SQL query
+    parameters:
+      type: object
+      properties:
+        query:
+          type: string
+          description: SQL query with ? placeholders
+        params:
+          type: array
+          items:
+            type: string
+          default: []
+        fetch:
+          type: boolean
+          default: true
+    handler: "skills/sqlite/main.py::execute"
+  - name: init_schema
+    description: Initialize database schema
+    parameters:
+      type: object
+      properties:
+        schema_name:
+          type: string
+          enum: ["jobs", "tasks", "security", "all"]
+          default: "all"
+    handler: "skills/sqlite/main.py::init_schema"
+  - name: backup
+    description: Backup database to file
+    parameters:
+      type: object
+      properties:
+        backup_path:
+          type: string
+    handler: "skills/sqlite/main.py::backup"

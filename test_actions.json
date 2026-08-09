@@ -1,0 +1,6 @@
+[
+  {"action": "fill", "selector": "input[name=\"custname\"]", "value": "Test User"},
+  {"action": "fill", "selector": "input[name=\"custtel\"]", "value": "123-456-7890"},
+  {"action": "click", "selector": "input[type=\"submit\"]"},
+  {"action": "extract", "selector": "body", "attr": "inner_text"}
+]

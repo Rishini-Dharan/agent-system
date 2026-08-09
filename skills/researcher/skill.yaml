@@ -1,0 +1,30 @@
+name: researcher
+description: Web research with source attribution, URL recording, date recording, fact/inference distinction
+version: 1.0
+tools:
+  - name: research
+    description: Research a topic and return structured findings with sources
+    parameters:
+      type: object
+      properties:
+        topic:
+          type: string
+          description: Research topic or question
+        max_sources:
+          type: integer
+          default: 10
+        require_attribution:
+          type: boolean
+          default: true
+    handler: "skills/researcher/main.py::research"
+  - name: extract_page
+    description: Extract structured data from a specific URL
+    parameters:
+      type: object
+      properties:
+        url:
+          type: string
+        selectors:
+          type: object
+          description: CSS selectors for extraction
+    handler: "skills/researcher/main.py::extract_page"

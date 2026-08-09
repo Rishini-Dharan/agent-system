@@ -1,0 +1,31 @@
+name: web_search
+description: Web search capabilities for agents
+version: 1.0
+tools:
+  - name: search
+    description: Search the web and return structured results
+    parameters:
+      type: object
+      properties:
+        query:
+          type: string
+          description: Search query
+        max_results:
+          type: integer
+          default: 10
+        source:
+          type: string
+          enum: ["google", "bing", "duckduckgo", "github", "stackoverflow"]
+          default: "google"
+    handler: "skills/web_search/main.py::search"
+  - name: fetch_url
+    description: Fetch and extract content from a specific URL
+    parameters:
+      type: object
+      properties:
+        url:
+          type: string
+        extract_text:
+          type: boolean
+          default: true
+    handler: "skills/web_search/main.py::fetch_url"

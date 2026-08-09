@@ -1,0 +1,81 @@
+# Job Search Configuration
+
+search:
+  keywords:
+    - "Python backend"
+    - "FastAPI"
+    - "Django"
+    - "Software Engineer"
+    - "Backend Developer"
+  locations:
+    - "Remote"
+    - "Seattle, WA"
+    - "San Francisco, CA"
+    - "Austin, TX"
+    - "New York, NY"
+  exclude_keywords:
+    - "unpaid"
+    - "internship"
+    - "volunteer"
+    - "contract-to-hire"
+  experience_years: 5
+  salary_min: 120000
+
+sources:
+  - linkedin
+  - indeed
+  - glassdoor
+  - github_jobs
+  - wellfound
+  - company_careers
+
+profile:
+  skills:
+    - name: "Python"
+      level: "expert"
+      years: 8
+    - name: "FastAPI"
+      level: "proficient"
+      years: 3
+    - name: "Django"
+      level: "proficient"
+      years: 4
+    - name: "PostgreSQL"
+      level: "expert"
+      years: 7
+    - name: "Docker"
+      level: "proficient"
+      years: 5
+    - name: "AWS"
+      level: "familiar"
+      years: 3
+    - name: "Kubernetes"
+      level: "familiar"
+      years: 2
+    - name: "Redis"
+      level: "proficient"
+      years: 4
+    - name: "SQLAlchemy"
+      level: "expert"
+      years: 6
+    - name: "Pytest"
+      level: "expert"
+      years: 5
+  preferences:
+    remote: true
+    hybrid: true
+    onsite: false
+    visa_sponsorship: false
+    company_size: ["startup", "mid", "large"]
+
+scoring:
+  weights:
+    required_skills: 0.4
+    preferred_skills: 0.2
+    experience: 0.2
+    location: 0.1
+    salary: 0.1
+  thresholds:
+    auto_prepare: 80
+    notify: 70
+    archive: 40

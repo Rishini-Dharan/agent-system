@@ -1,0 +1,15 @@
+{
+  "scan_id": "sec-20260809-100808",
+  "timestamp": "2026-08-09T10:08:23.859105",
+  "target_path": "C:\\Users\\rishi\\agent-system",
+  "summary": {
+    "total": 0,
+    "critical": 0,
+    "high": 0,
+    "medium": 0,
+    "low": 0,
+    "info": 0,
+    "by_tool": {}
+  },
+  "findings": []
+}

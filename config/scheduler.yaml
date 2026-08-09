@@ -1,0 +1,50 @@
+# Scheduler Configuration
+
+timezone: "America/Los_Angeles"
+
+morning:
+  enabled: true
+  time: "08:00"
+  tasks:
+    - job_search
+    - github_notifications
+    - repo_health
+    - daily_task_list
+    - morning_report
+
+evening:
+  enabled: true
+  time: "18:00"
+  tasks:
+    - unfinished_tasks
+    - repo_tests
+    - security_scans
+    - change_summary
+    - evening_report
+    - cleanup
+
+weekly:
+  enabled: true
+  day: "monday"
+  time: "09:00"
+  tasks:
+    - deep_security_scan
+    - dependency_audit
+    - issues_review
+    - prs_review
+    - engineering_report
+    - strategic_plan
+
+repos:
+  - path: "~/projects/my-project"
+    test_on_schedule: true
+    security_scan: true
+  - path: "~/projects/another-repo"
+    test_on_schedule: false
+    security_scan: true
+
+notifications:
+  enabled: true
+  channels:
+    - type: "file"
+      path: "reports/notifications/"

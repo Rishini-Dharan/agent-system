@@ -1,0 +1,77 @@
+name: github
+description: GitHub operations via gh CLI
+version: 1.0
+tools:
+  - name: get_issue
+    description: Get issue details
+    parameters:
+      type: object
+      properties:
+        owner:
+          type: string
+        repo:
+          type: string
+        issue_number:
+          type: integer
+    handler: "skills/github/main.py::get_issue"
+  - name: create_branch
+    description: Create and checkout a new branch
+    parameters:
+      type: object
+      properties:
+        branch_name:
+          type: string
+        base_branch:
+          type: string
+          default: "main"
+    handler: "skills/github/main.py::create_branch"
+  - name: commit_changes
+    description: Stage and commit changes
+    parameters:
+      type: object
+      properties:
+        message:
+          type: string
+        files:
+          type: array
+          items:
+            type: string
+          default: ["."]
+    handler: "skills/github/main.py::commit_changes"
+  - name: push_branch
+    description: Push branch to origin
+    parameters:
+      type: object
+      properties:
+        branch_name:
+          type: string
+        force:
+          type: boolean
+          default: false
+    handler: "skills/github/main.py::push_branch"
+  - name: create_pr
+    description: Create a pull request
+    parameters:
+      type: object
+      properties:
+        title:
+          type: string
+        body:
+          type: string
+        base_branch:
+          type: string
+          default: "main"
+        head_branch:
+          type: string
+        draft:
+          type: boolean
+          default: false
+    handler: "skills/github/main.py::create_pr"
+  - name: get_pr_status
+    description: Get PR status and checks
+    parameters:
+      type: object
+      properties:
+        pr_number:
+          type: integer
+    handler: "skills/github/main.py::get_pr_status"
