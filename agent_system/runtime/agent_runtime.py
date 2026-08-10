@@ -14,6 +14,12 @@ from typing import Any, Dict, List, Optional, Type
 
 from pydantic import BaseModel
 
+# Use json-repair for robust JSON parsing
+try:
+    from json_repair import repair_json
+except ImportError:
+    repair_json = None
+
 from agent_system.config import get_config
 from agent_system.providers import (
     BaseProvider,
@@ -354,8 +360,23 @@ Return ONLY the JSON object.
             )
     
     def _attempt_json_repair(self, text: str) -> Optional[str]:
-        """Attempt to extract valid JSON from text."""
-        # Try to find JSON object in text
+        """Attempt to extract valid JSON from text using json-repair library."""
+        if repair_json is None:
+            self.logger.warning("json-repair not available, falling back to regex")
+            return self._fallback_json_repair(text)
+        
+        try:
+            # json-repair can fix many common JSON issues
+            repaired = repair_json(text)
+            # Validate it's actually valid JSON
+            json.loads(repaired)
+            return repaired
+        except Exception as e:
+            self.logger.debug(f"json-repair failed: {e}, falling back")
+            return self._fallback_json_repair(text)
+    
+    def _fallback_json_repair(self, text: str) -> Optional[str]:
+        """Fallback regex-based JSON extraction."""
         import re
         
         # Look for JSON object

@@ -23,6 +23,7 @@ from agent_system.schemas import (
 )
 from agent_system.runtime import BaseAgent, AgentConfig
 from agent_system.observability import get_logger
+from agent_system.providers import Message
 
 
 class ResearcherAgent(BaseAgent):
@@ -68,44 +69,71 @@ class ResearcherAgent(BaseAgent):
             return "general_research"
     
     async def _web_research(self, task: Task, context: Dict[str, Any]) -> ResearchResult:
-        """Perform web research using LLM with search capability."""
+        """Perform web research using browser tool."""
+        query = context.get("query", task.description)
+        
+        # Use browser tool to search
+        search_results = await self._search_web(query)
+        
+        # Build context from search results
+        research_context = self._build_research_context(search_results, query)
+        
         messages = self._build_messages(task, context)
         
-        # Add research-specific instructions
-        research_prompt = """Perform thorough web research on the given topic. Use the browser tool to search for information.
+        # Add research-specific instructions with search results
+        research_prompt = f"""Perform thorough web research on the given topic using the search results provided.
+
+Query: {query}
+
+Search Results:
+{research_context}
 
 Your research should:
-1. Search for authoritative sources (official docs, reputable sites, academic papers)
+1. Analyze the search results for authoritative sources (official docs, reputable sites, academic papers)
 2. Extract key facts and findings
 3. Distinguish between facts and opinions
 4. Cite all sources with URLs
 5. Assess confidence in each finding
 
-Return structured JSON with findings array."""
+Return structured JSON with findings array in this format:
+{{
+  "status": "success|partial|failed",
+  "task": "description",
+  "findings": [
+    {{"claim": "...", "source_url": "...", "source_title": "...", "accessed_date": "YYYY-MM-DD", "type": "fact|inference", "confidence": "high|medium|low"}}
+  ],
+  "summary": "...",
+  "recommendations": [],
+  "confidence": 0.95
+}}"""
         
-        messages.append({"role": "user", "content": research_prompt})
-        
-        # Convert to Message objects
-        from agent_system.providers import Message
-        msg_objects = [Message(role=m["role"], content=m["content"]) for m in messages]
+        messages.append(Message(role="user", content=research_prompt))
         
         result = await self._call_llm_structured(
-            msg_objects,
+            messages,
             ResearchResult,
         )
         
-        # Ensure it's a ResearchResult
         if isinstance(result, ResearchResult):
             return result
-        
-        # Convert if needed
         return ResearchResult(**result.model_dump())
     
     async def _documentation_research(self, task: Task, context: Dict[str, Any]) -> ResearchResult:
         """Research documentation for a library/API."""
+        query = context.get("query", task.description)
+        
+        # Search for documentation
+        search_results = await self._search_web(f"{query} documentation")
+        research_context = self._build_research_context(search_results, query)
+        
         messages = self._build_messages(task, context)
         
-        doc_prompt = """Research the documentation for the specified library/API.
+        doc_prompt = f"""Research the documentation for the specified library/API using the search results.
+
+Query: {query}
+
+Search Results:
+{research_context}
 
 Focus on:
 1. Official documentation sources
@@ -114,21 +142,29 @@ Focus on:
 4. Common patterns and best practices
 5. Version-specific information
 
-Use browser tool to navigate documentation sites."""
+Return structured JSON with findings array."""
         
-        messages.append({"role": "user", "content": doc_prompt})
+        messages.append(Message(role="user", content=doc_prompt))
         
-        from agent_system.providers import Message
-        msg_objects = [Message(role=m["role"], content=m["content"]) for m in messages]
-        
-        result = await self._call_llm_structured(msg_objects, ResearchResult)
+        result = await self._call_llm_structured(messages, ResearchResult)
         return result if isinstance(result, ResearchResult) else ResearchResult(**result.model_dump())
     
     async def _error_investigation(self, task: Task, context: Dict[str, Any]) -> ResearchResult:
         """Investigate an error or bug."""
+        query = context.get("query", task.description)
+        
+        # Search for error
+        search_results = await self._search_web(f"{query} error fix solution")
+        research_context = self._build_research_context(search_results, query)
+        
         messages = self._build_messages(task, context)
         
-        error_prompt = """Investigate the reported error/bug.
+        error_prompt = f"""Investigate the reported error/bug using the search results.
+
+Query: {query}
+
+Search Results:
+{research_context}
 
 Focus on:
 1. Search for the exact error message
@@ -137,21 +173,29 @@ Focus on:
 4. Find workarounds or fixes
 5. Check version compatibility issues
 
-Use browser tool to search for error details."""
+Return structured JSON with findings array."""
         
-        messages.append({"role": "user", "content": error_prompt})
+        messages.append(Message(role="user", content=error_prompt))
         
-        from agent_system.providers import Message
-        msg_objects = [Message(role=m["role"], content=m["content"]) for m in messages]
-        
-        result = await self._call_llm_structured(msg_objects, ResearchResult)
+        result = await self._call_llm_structured(messages, ResearchResult)
         return result if isinstance(result, ResearchResult) else ResearchResult(**result.model_dump())
     
     async def _comparison_research(self, task: Task, context: Dict[str, Any]) -> ResearchResult:
         """Compare technologies/approaches."""
+        query = context.get("query", task.description)
+        
+        # Search for comparison
+        search_results = await self._search_web(f"{query} comparison vs alternatives")
+        research_context = self._build_research_context(search_results, query)
+        
         messages = self._build_messages(task, context)
         
-        compare_prompt = """Compare the specified technologies/approaches.
+        compare_prompt = f"""Compare the specified technologies/approaches using the search results.
+
+Query: {query}
+
+Search Results:
+{research_context}
 
 Provide:
 1. Feature comparison matrix
@@ -161,21 +205,29 @@ Provide:
 5. Migration considerations
 6. Recommendation based on use case
 
-Use browser tool to gather current information."""
+Return structured JSON with findings array."""
         
-        messages.append({"role": "user", "content": compare_prompt})
+        messages.append(Message(role="user", content=compare_prompt))
         
-        from agent_system.providers import Message
-        msg_objects = [Message(role=m["role"], content=m["content"]) for m in messages]
-        
-        result = await self._call_llm_structured(msg_objects, ResearchResult)
+        result = await self._call_llm_structured(messages, ResearchResult)
         return result if isinstance(result, ResearchResult) else ResearchResult(**result.model_dump())
     
     async def _general_research(self, task: Task, context: Dict[str, Any]) -> ResearchResult:
         """General research fallback."""
+        query = context.get("query", task.description)
+        
+        # Search for general info
+        search_results = await self._search_web(query)
+        research_context = self._build_research_context(search_results, query)
+        
         messages = self._build_messages(task, context)
         
-        general_prompt = """Research the given topic thoroughly.
+        general_prompt = f"""Research the given topic thoroughly using the search results.
+
+Query: {query}
+
+Search Results:
+{research_context}
 
 Provide:
 1. Key findings with sources
@@ -184,21 +236,52 @@ Provide:
 4. Any warnings or caveats
 5. Recommendations
 
-Use browser tool as needed."""
+Return structured JSON with findings array."""
         
-        messages.append({"role": "user", "content": general_prompt})
+        messages.append(Message(role="user", content=general_prompt))
         
-        from agent_system.providers import Message
-        msg_objects = [Message(role=m["role"], content=m["content"]) for m in messages]
-        
-        result = await self._call_llm_structured(msg_objects, ResearchResult)
+        result = await self._call_llm_structured(messages, ResearchResult)
         return result if isinstance(result, ResearchResult) else ResearchResult(**result.model_dump())
     
     async def _search_web(self, query: str) -> List[Dict[str, Any]]:
         """Search the web using browser tool."""
-        # This would use the browser tool
-        # For now, return empty - browser integration needed
+        try:
+            # Use the browser tool via tool manager
+            if self.tool_manager:
+                result = await self.tool_manager.execute("browser_navigate", {
+                    "url": f"https://www.google.com/search?q={query}",
+                    "wait_for": "networkidle",
+                    "timeout": 30000,
+                })
+                
+                if result.success and result.result:
+                    extracted = result.result.get("extracted_data", {})
+                    return [{
+                        "query": query,
+                        "url": "https://www.google.com/search?q=" + query,
+                        "title": extracted.get("title", ""),
+                        "content": extracted.get("text_content", "")[:2000],
+                    }]
+        except Exception as e:
+            self.logger.warning(f"Browser search failed: {e}")
+        
+        # Fallback: return empty for LLM to handle
         return []
+    
+    def _build_research_context(self, search_results: List[Dict[str, Any]], query: str) -> str:
+        """Build research context from search results."""
+        if not search_results:
+            return "No search results available. Use your knowledge to provide research."
+        
+        context_parts = [f"Search query: {query}\n"]
+        for i, result in enumerate(search_results, 1):
+            context_parts.append(f"Result {i}:")
+            context_parts.append(f"  URL: {result.get('url', 'N/A')}")
+            context_parts.append(f"  Title: {result.get('title', 'N/A')}")
+            context_parts.append(f"  Content: {result.get('content', 'N/A')[:500]}")
+            context_parts.append("")
+        
+        return "\n".join(context_parts)
 
 
 def create_researcher_agent(tool_manager=None) -> ResearcherAgent:

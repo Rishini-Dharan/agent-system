@@ -1,0 +1,1037 @@
+{
+  "overall_project_status": "PARTIAL",
+  "project_version": "0.1.0",
+  "review_date": "2026-08-10",
+  "summary": "The agent-system project has a well-architected foundation with all 8 agents implemented, a solid provider abstraction layer, comprehensive routing, state management, security, and observability. However, there are significant gaps in actual tool integration (browser, Playwright), LLM response parsing/validation robustness, error handling completeness, and test coverage. The system is at an advanced prototype stage but needs critical fixes before production readiness.",
+  "component_assessments": {
+    "core_architecture": {
+      "cli.py": {
+        "status": "GOOD",
+        "code_quality": 8,
+        "completeness": 85,
+        "error_handling": 7,
+        "type_safety": 8,
+        "documentation": 7,
+        "issues": [
+          "Multiple asyncio.run() calls in shutdown sequences could cause issues",
+          "No proper signal handling for graceful shutdown",
+          "CLI commands re-initialize system for each command - inefficient",
+          "Missing validation for required environment variables before initialization"
+        ],
+        "recommendations": [
+          "Use single event loop for CLI session",
+          "Add signal handlers for SIGTERM/SIGINT",
+          "Implement lazy initialization or singleton pattern",
+          "Add pre-flight checks in doctor command"
+        ]
+      },
+      "config.py": {
+        "status": "GOOD",
+        "code_quality": 8,
+        "completeness": 90,
+        "error_handling": 6,
+        "type_safety": 8,
+        "documentation": 6,
+        "issues": [
+          "No schema validation for loaded YAML configs",
+          "Missing environment variable interpolation in configs",
+          "Cache never invalidated except via explicit reload()",
+          "No configuration hot-reload support"
+        ],
+        "recommendations": [
+          "Add Pydantic models for config validation",
+          "Support  interpolation",
+          "Add file watcher for hot reload",
+          "Add config version/migration support"
+        ]
+      },
+      "__init__.py": {
+        "status": "GOOD",
+        "code_quality": 9,
+        "completeness": 95,
+        "error_handling": 8,
+        "type_safety": 9,
+        "documentation": 8,
+        "issues": [
+          "Exports many internal classes - consider reducing public API surface",
+          "Version hardcoded - should read from pyproject.toml"
+        ]
+      }
+    },
+    "agents": {
+      "orchestrator": {
+        "status": "GOOD",
+        "code_quality": 8,
+        "completeness": 80,
+        "error_handling": 7,
+        "type_safety": 8,
+        "documentation": 7,
+        "issues": [
+          "LLM planning prompt is very long - may exceed context limits",
+          "Fallback plan logic is simplistic keyword matching",
+          "No validation of LLM-generated plan structure",
+          "Conflict resolution creates new orchestrator task recursively",
+          "Agent delegation uses hardcoded AGENT_MAP - not configurable",
+          "JSON parsing in _parse_agent_response is fragile",
+          "No handling of partial/streaming LLM responses"
+        ],
+        "recommendations": [
+          "Add plan schema validation with Pydantic",
+          "Implement iterative planning with feedback",
+          "Make AGENT_MAP configurable via agents.yaml",
+          "Add structured output enforcement for all delegations",
+          "Implement proper conflict resolution without recursion"
+        ]
+      },
+      "researcher": {
+        "status": "PARTIAL",
+        "code_quality": 7,
+        "completeness": 60,
+        "error_handling": 6,
+        "type_safety": 7,
+        "documentation": 6,
+        "issues": [
+          "_search_web() returns empty list - browser tool not integrated",
+          "All research methods just call LLM with prompts - no actual web search",
+          "No citation extraction or verification",
+          "No rate limiting for web searches",
+          "No deduplication of sources",
+          "Returns mock data instead of real research"
+        ],
+        "recommendations": [
+          "Integrate BrowserAgent for actual web search",
+          "Add citation extraction and validation",
+          "Implement source credibility scoring",
+          "Add search result caching",
+          "Implement fact-checking against multiple sources"
+        ]
+      },
+      "coder": {
+        "status": "PARTIAL",
+        "code_quality": 7,
+        "completeness": 55,
+        "error_handling": 6,
+        "type_safety": 7,
+        "documentation": 6,
+        "issues": [
+          "_apply_changes() is a stub - does not actually write files",
+          "No integration with filesystem tools for reading/writing code",
+          "No syntax validation of generated code",
+          "No test execution after implementation",
+          "No linting/type-checking integration",
+          "Diff generation is manual - not automated",
+          "Context preparation does not include git diff/history"
+        ],
+        "recommendations": [
+          "Integrate with fs_read/fs_write/fs_glob tools",
+          "Add code validation pipeline (syntax, lint, types)",
+          "Auto-generate diffs from before/after file states",
+          "Run tests automatically after changes",
+          "Add incremental context building for large repos"
+        ]
+      },
+      "reviewer": {
+        "status": "GOOD",
+        "code_quality": 8,
+        "completeness": 75,
+        "error_handling": 7,
+        "type_safety": 8,
+        "documentation": 7,
+        "issues": [
+          "Security review depends on external security_findings in context - not self-contained",
+          "No automated test execution to verify fixes",
+          "Architecture review limited to file sampling",
+          "No integration with security scanner results"
+        ],
+        "recommendations": [
+          "Auto-run security scan if findings not in context",
+          "Add test result fetching and analysis",
+          "Implement full repo architecture analysis",
+          "Add dependency graph analysis"
+        ]
+      },
+      "security": {
+        "status": "GOOD",
+        "code_quality": 8,
+        "completeness": 80,
+        "error_handling": 7,
+        "type_safety": 8,
+        "documentation": 7,
+        "issues": [
+          "Relies on external tools (semgrep, gitleaks, trivy) being installed",
+          "No fallback if tools not available",
+          "Tool timeouts are hardcoded",
+          "No incremental scanning support",
+          "Results parsing assumes specific JSON formats"
+        ],
+        "recommendations": [
+          "Add tool installation verification in doctor",
+          "Implement graceful degradation when tools missing",
+          "Make timeouts configurable",
+          "Add incremental scan support for large repos",
+          "Normalize findings across tool versions"
+        ]
+      },
+      "tester": {
+        "status": "PARTIAL",
+        "code_quality": 7,
+        "completeness": 60,
+        "error_handling": 6,
+        "type_safety": 7,
+        "documentation": 6,
+        "issues": [
+          "_run_tests() uses pytest_run tool but does not handle test file creation",
+          "Test output parsing is basic regex - fragile",
+          "No support for other test frameworks (jest, cargo test, etc.)",
+          "No coverage analysis integration",
+          "Failure analysis does not actually reproduce bugs"
+        ],
+        "recommendations": [
+          "Integrate test file creation with coder agent",
+          "Use pytest JSON output (--json-report) for reliable parsing",
+          "Add multi-framework test runner support",
+          "Integrate coverage.py for coverage analysis",
+          "Add bug reproduction sandbox"
+        ]
+      },
+      "github": {
+        "status": "PARTIAL",
+        "code_quality": 7,
+        "completeness": 65,
+        "error_handling": 6,
+        "type_safety": 7,
+        "documentation": 6,
+        "issues": [
+          "Uses shell commands directly - fragile, no GitHub API integration",
+          "No authentication handling for gh CLI",
+          "PR creation does not verify branch exists remotely",
+          "No support for GitHub Actions/workflows",
+          "No issue/PR querying via API"
+        ],
+        "recommendations": [
+          "Use GitHub SDK (PyGithub) for API operations",
+          "Add gh auth verification",
+          "Implement branch push verification",
+          "Add GitHub Actions integration",
+          "Add issue/PR search and management"
+        ]
+      },
+      "browser": {
+        "status": "INCOMPLETE",
+        "code_quality": 6,
+        "completeness": 30,
+        "error_handling": 5,
+        "type_safety": 7,
+        "documentation": 6,
+        "issues": [
+          "All methods are stubs returning simulated data",
+          "No Playwright integration at all",
+          "No browser lifecycle management",
+          "No session/cookie handling",
+          "No JavaScript execution support",
+          "No screenshot capture",
+          "No rate limiting or robots.txt compliance"
+        ],
+        "recommendations": [
+          "Implement full Playwright integration",
+          "Add browser context management",
+          "Implement page navigation with wait strategies",
+          "Add data extraction with CSS/XPath selectors",
+          "Implement form interaction and JS execution",
+          "Add screenshot/video capture",
+          "Add rate limiting and robots.txt checker"
+        ]
+      }
+    },
+    "providers": {
+      "base": {
+        "status": "EXCELLENT",
+        "code_quality": 9,
+        "completeness": 95,
+        "error_handling": 9,
+        "type_safety": 9,
+        "documentation": 8,
+        "issues": [
+          "Rate limiting uses simple sliding window - could be more precise",
+          "Token estimation is very rough (chars/4)",
+          "No request/response logging for debugging",
+          "Provider factory cache never expires"
+        ],
+        "recommendations": [
+          "Implement token counting via tiktoken",
+          "Add request/response logging option",
+          "Add cache TTL for provider instances",
+          "Support provider-specific rate limit configs"
+        ]
+      },
+      "nvidia": {
+        "status": "EXCELLENT",
+        "code_quality": 9,
+        "completeness": 95,
+        "error_handling": 9,
+        "type_safety": 9,
+        "documentation": 8,
+        "issues": [
+          "Error handling could include more provider-specific error codes",
+          "No model capability detection (auto-discover what model supports)"
+        ]
+      },
+      "openrouter": {
+        "status": "EXCELLENT",
+        "code_quality": 9,
+        "completeness": 95,
+        "error_handling": 9,
+        "type_safety": 9,
+        "documentation": 8,
+        "issues": [
+          "Identical to NVIDIA provider - code duplication",
+          "OpenRouter-specific features not utilized (model routing, fallbacks)"
+        ],
+        "recommendations": [
+          "Refactor common OpenAI-compatible logic to base class",
+          "Add OpenRouter-specific routing parameters"
+        ]
+      },
+      "zai": {
+        "status": "EXCELLENT",
+        "code_quality": 9,
+        "completeness": 95,
+        "error_handling": 9,
+        "type_safety": 9,
+        "documentation": 8,
+        "issues": [
+          "Same code duplication as OpenRouter",
+          "Z.ai specific features not utilized"
+        ]
+      },
+      "google": {
+        "status": "GOOD",
+        "code_quality": 8,
+        "completeness": 90,
+        "error_handling": 8,
+        "type_safety": 8,
+        "documentation": 7,
+        "issues": [
+          "Uses native SDK instead of HTTP - different patterns",
+          "Structured output not fully supported via SDK",
+          "Token counting uses SDK usage_metadata",
+          "No async iterator cleanup on errors"
+        ],
+        "recommendations": [
+          "Align patterns with HTTP providers where possible",
+          "Add structured output via response_schema",
+          "Ensure proper resource cleanup"
+        ]
+      }
+    },
+    "router": {
+      "model_router.py": {
+        "status": "GOOD",
+        "code_quality": 8,
+        "completeness": 85,
+        "error_handling": 7,
+        "type_safety": 8,
+        "documentation": 7,
+        "issues": [
+          "Routing logic is complex but not well tested for edge cases",
+          "Health check creates new provider instances - inefficient",
+          "Fallback chain does not consider cost optimization",
+          "No routing metrics/analytics",
+          "Complexity routing uses string matching - fragile"
+        ],
+        "recommendations": [
+          "Add comprehensive routing decision tests",
+          "Cache provider health checks",
+          "Add cost-aware fallback selection",
+          "Implement routing analytics dashboard",
+          "Use enum-based complexity matching"
+        ]
+      }
+    },
+    "runtime": {
+      "agent_runtime.py": {
+        "status": "GOOD",
+        "code_quality": 8,
+        "completeness": 85,
+        "error_handling": 7,
+        "type_safety": 8,
+        "documentation": 7,
+        "issues": [
+          "_get_provider() has complex fallback logic that may not find correct provider",
+          "JSON repair in _attempt_json_repair() is basic regex",
+          "Structured output instruction adds many tokens to prompt",
+          "No handling of partial LLM responses",
+          "Tool execution does not propagate tool_call metadata to result"
+        ],
+        "recommendations": [
+          "Simplify provider lookup with direct config mapping",
+          "Use proper JSON repair library (json-repair)",
+          "Use response_format for structured output when available",
+          "Add streaming support for partial responses",
+          "Track tool calls in agent results"
+        ]
+      },
+      "context_manager.py": {
+        "status": "GOOD",
+        "code_quality": 8,
+        "completeness": 80,
+        "error_handling": 7,
+        "type_safety": 8,
+        "documentation": 7,
+        "issues": [
+          "File reading limited to 100KB - may miss important large files",
+          "Keyword-based file relevance is simplistic",
+          "No semantic code search (embeddings)",
+          "Cache never invalidated on file changes",
+          "Git operations use subprocess - fragile"
+        ],
+        "recommendations": [
+          "Add configurable file size limits",
+          "Integrate code embeddings for semantic search",
+          "Add file watcher for cache invalidation",
+          "Use GitPython for git operations"
+        ]
+      },
+      "execution_manager.py": {
+        "status": "GOOD",
+        "code_quality": 8,
+        "completeness": 85,
+        "error_handling": 7,
+        "type_safety": 8,
+        "documentation": 7,
+        "issues": [
+          "No task prioritization in parallel execution",
+          "Sequential execution stops on first failure - no continue-on-error option",
+          "Workflow step conditions use raw Python expressions - security risk",
+          "No checkpointing for long-running workflows",
+          "Conflict resolution creates new task - could loop"
+        ],
+        "recommendations": [
+          "Add task priority queue for parallel execution",
+          "Add continue_on_error flag for sequential workflows",
+          "Use safe expression evaluator for conditions",
+          "Implement workflow checkpointing",
+          "Add conflict resolution iteration limits"
+        ]
+      },
+      "tool_manager.py": {
+        "status": "EXCELLENT",
+        "code_quality": 9,
+        "completeness": 95,
+        "error_handling": 9,
+        "type_safety": 9,
+        "documentation": 8,
+        "issues": [
+          "Argument validation is basic - only checks required fields",
+          "No JSON schema validation (using jsonschema library)",
+          "Terminal command uses shell=True - security risk",
+          "No tool execution sandboxing",
+          "Permission check is coarse-grained"
+        ],
+        "recommendations": [
+          "Add full JSON schema validation",
+          "Use shlex.split() instead of shell=True",
+          "Implement tool execution sandbox (Docker/gVisor)",
+          "Add fine-grained permission policies"
+        ]
+      }
+    },
+    "schemas": {
+      "agent_result.py": {
+        "status": "EXCELLENT",
+        "code_quality": 9,
+        "completeness": 95,
+        "error_handling": 8,
+        "type_safety": 9,
+        "documentation": 8,
+        "issues": [
+          "validate_agent_result() creates new instances - loses original type info",
+          "repair_agent_result() is basic - does not handle nested validation",
+          "Confidence validation clamps but does not warn",
+          "No schema versioning for forward compatibility"
+        ],
+        "recommendations": [
+          "Add schema version field",
+          "Improve repair with Pydantic model_validate",
+          "Add validation warnings for clamped values",
+          "Support schema evolution/migration"
+        ]
+      },
+      "task.py": {
+        "status": "GOOD",
+        "code_quality": 8,
+        "completeness": 90,
+        "error_handling": 7,
+        "type_safety": 8,
+        "documentation": 7,
+        "issues": [
+          "TaskType enum duplicates router.TaskType",
+          "WorkflowStep condition is raw string - security risk",
+          "No task dependency graph validation"
+        ],
+        "recommendations": [
+          "Unify TaskType enums",
+          "Use safe expression language for conditions",
+          "Add dependency cycle detection"
+        ]
+      },
+      "workflow.py": {
+        "status": "GOOD",
+        "code_quality": 8,
+        "completeness": 85,
+        "error_handling": 7,
+        "type_safety": 8,
+        "documentation": 7,
+        "issues": [
+          "ApprovalRequest action_type is free-form string",
+          "Checkpoint state_snapshot is untyped Dict",
+          "No workflow versioning/migration support"
+        ],
+        "recommendations": [
+          "Enum-ify action_type",
+          "Type-checkpoint snapshots with Pydantic",
+          "Add workflow schema versioning"
+        ]
+      }
+    },
+    "security": {
+      "permissions.py": {
+        "status": "GOOD",
+        "code_quality": 8,
+        "completeness": 85,
+        "error_handling": 7,
+        "type_safety": 8,
+        "documentation": 7,
+        "issues": [
+          "Permission hierarchy is hardcoded - not configurable",
+          "Action sets are static - cannot extend without code changes",
+          "No audit logging for permission checks"
+        ],
+        "recommendations": [
+          "Make hierarchy configurable via YAML",
+          "Add dynamic action registration",
+          "Add permission audit trail"
+        ]
+      },
+      "command_guard.py": {
+        "status": "GOOD",
+        "code_quality": 8,
+        "completeness": 80,
+        "error_handling": 7,
+        "type_safety": 8,
+        "documentation": 7,
+        "issues": [
+          "Pattern matching is regex-based - can be bypassed",
+          "ALWAYS_BLOCKED list is small",
+          "No allowlist mode (only denylist)",
+          "Sanitization removes dangerous parts but may leave valid command broken"
+        ],
+        "recommendations": [
+          "Implement AST-based command analysis",
+          "Expand blocked patterns",
+          "Add allowlist mode for high-security environments",
+          "Improve sanitization to preserve valid commands"
+        ]
+      },
+      "scanners.py": {
+        "status": "GOOD",
+        "code_quality": 8,
+        "completeness": 80,
+        "error_handling": 7,
+        "type_safety": 8,
+        "documentation": 7,
+        "issues": [
+          "Tool availability checked per-scan - should cache",
+          "No support for custom semgrep rules",
+          "Trivy scan does not filter by severity",
+          "No incremental scanning",
+          "Results parsing assumes specific tool output formats"
+        ],
+        "recommendations": [
+          "Cache tool availability",
+          "Add custom rule support",
+          "Add severity filtering",
+          "Implement incremental scan support",
+          "Add version-tolerant result parsing"
+        ]
+      }
+    },
+    "state": {
+      "database.py": {
+        "status": "EXCELLENT",
+        "code_quality": 9,
+        "completeness": 95,
+        "error_handling": 9,
+        "type_safety": 9,
+        "documentation": 8,
+        "issues": [
+          "No connection pooling configuration",
+          "Cleanup deletes data without archiving",
+          "No database migration support",
+          "SQLite may not handle high concurrency well"
+        ],
+        "recommendations": [
+          "Add connection pool tuning",
+          "Implement soft-delete/archive instead of hard delete",
+          "Add Alembic migrations",
+          "Document SQLite limitations and PostgreSQL migration path"
+        ]
+      },
+      "models.py": {
+        "status": "EXCELLENT",
+        "code_quality": 9,
+        "completeness": 95,
+        "error_handling": 9,
+        "type_safety": 9,
+        "documentation": 8,
+        "issues": [
+          "JSON columns lose type safety",
+          "No composite indexes for common query patterns",
+          "Enum columns use SQLEnum - may have migration issues"
+        ],
+        "recommendations": [
+          "Consider PostgreSQL JSONB with validation",
+          "Add more composite indexes based on query analysis",
+          "Use native enums or check constraints"
+        ]
+      }
+    },
+    "tools": {
+      "tool_manager.py": {
+        "status": "EXCELLENT",
+        "code_quality": 9,
+        "completeness": 95,
+        "error_handling": 9,
+        "type_safety": 9,
+        "documentation": 8,
+        "issues": [
+          "See runtime.tool_manager.py assessment above"
+        ]
+      }
+    },
+    "observability": {
+      "logger.py": {
+        "status": "GOOD",
+        "code_quality": 8,
+        "completeness": 85,
+        "error_handling": 7,
+        "type_safety": 8,
+        "documentation": 7,
+        "issues": [
+          "Structlog configured per-logger - should be global",
+          "Log files never rotated - will grow indefinitely",
+          "JSON logs not optimized for log aggregation systems",
+          "No correlation IDs for request tracing"
+        ],
+        "recommendations": [
+          "Configure structlog once globally",
+          "Add log rotation (loguru or logging.handlers)",
+          "Add standard fields for log aggregation (trace_id, span_id)",
+          "Implement distributed tracing correlation"
+        ]
+      },
+      "metrics.py": {
+        "status": "GOOD",
+        "code_quality": 8,
+        "completeness": 85,
+        "error_handling": 7,
+        "type_safety": 8,
+        "documentation": 7,
+        "issues": [
+          "In-memory only - lost on restart",
+          "No Prometheus/OpenTelemetry export",
+          "No histogram/percentile tracking for latency",
+          "Thread-safe but not process-safe"
+        ],
+        "recommendations": [
+          "Add persistent metrics backend (Redis/PostgreSQL)",
+          "Add Prometheus metrics endpoint",
+          "Implement histogram buckets for latency",
+          "Support multiprocess metrics aggregation"
+        ]
+      }
+    },
+    "tests": {
+      "test_router.py": {
+        "status": "PARTIAL",
+        "code_quality": 7,
+        "completeness": 40,
+        "error_handling": 6,
+        "type_safety": 7,
+        "documentation": 6,
+        "issues": [
+          "Uses mock config strings instead of real config files",
+          "Limited test coverage for fallback scenarios",
+          "No integration tests with real providers",
+          "Async mock setup is complex and fragile"
+        ]
+      },
+      "test_security.py": {
+        "status": "GOOD",
+        "code_quality": 8,
+        "completeness": 70,
+        "error_handling": 7,
+        "type_safety": 8,
+        "documentation": 7,
+        "issues": [
+          "Good coverage for permission/command guard",
+          "No tests for scanner integration",
+          "No tests for approval workflow"
+        ]
+      },
+      "test_schemas.py": {
+        "status": "GOOD",
+        "code_quality": 8,
+        "completeness": 75,
+        "error_handling": 7,
+        "type_safety": 8,
+        "documentation": 7,
+        "issues": [
+          "Tests basic validation but not edge cases",
+          "No tests for schema evolution",
+          "Limited repair function testing"
+        ]
+      },
+      "test_subagent_delegation.py": {
+        "status": "GOOD",
+        "code_quality": 8,
+        "completeness": 80,
+        "error_handling": 7,
+        "type_safety": 8,
+        "documentation": 7,
+        "issues": [
+          "Comprehensive delegation tests",
+          "Heavily mocked - does not test actual LLM integration",
+          "No tests for parallel delegation resource limits"
+        ]
+      },
+      "overall": {
+        "issues": [
+          "Only 4 test files for a large codebase",
+          "No integration tests",
+          "No end-to-end workflow tests",
+          "No performance/load tests",
+          "No contract tests for provider APIs",
+          "Test coverage likely < 30%"
+        ],
+        "recommendations": [
+          "Add integration tests with test containers",
+          "Implement end-to-end workflow tests",
+          "Add provider contract tests",
+          "Set up CI with coverage reporting",
+          "Target > 80% coverage for critical paths"
+        ]
+      }
+    },
+    "configuration": {
+      "agents.yaml": {
+        "status": "EXCELLENT",
+        "code_quality": 9,
+        "completeness": 95,
+        "error_handling": 8,
+        "type_safety": 9,
+        "documentation": 9,
+        "issues": [
+          "System prompts are very long - may exceed context limits",
+          "No validation of agent config at startup"
+        ]
+      },
+      "models.yaml": {
+        "status": "EXCELLENT",
+        "code_quality": 9,
+        "completeness": 95,
+        "error_handling": 8,
+        "type_safety": 9,
+        "documentation": 9,
+        "issues": [
+          "Model IDs hardcoded - will become stale",
+          "No model deprecation/version tracking",
+          "Cost tracking not integrated with actual provider pricing"
+        ],
+        "recommendations": [
+          "Add model version tracking",
+          "Integrate with provider pricing APIs",
+          "Add model health/availability monitoring"
+        ]
+      },
+      "routing.yaml": {
+        "status": "EXCELLENT",
+        "code_quality": 9,
+        "completeness": 95,
+        "error_handling": 8,
+        "type_safety": 9,
+        "documentation": 9,
+        "issues": [
+          "Fallback chains duplicate models.yaml info",
+          "Capability requirements could be derived from provider config"
+        ],
+        "recommendations": [
+          "Consolidate model/fallback info in single source",
+          "Auto-generate capability requirements from provider config"
+        ]
+      },
+      "limits.yaml": {
+        "status": "EXCELLENT",
+        "code_quality": 9,
+        "completeness": 95,
+        "error_handling": 8,
+        "type_safety": 9,
+        "documentation": 9,
+        "issues": [
+          "Cost tracking assumes fixed pricing - providers change prices",
+          "Free tier limits may be outdated",
+          "No dynamic limit adjustment based on usage"
+        ],
+        "recommendations": [
+          "Add pricing API integration",
+          "Implement adaptive rate limiting",
+          "Add usage-based limit alerts"
+        ]
+      }
+    }
+  },
+  "critical_issues": [
+    {
+      "id": "CRIT-001",
+      "component": "agents/browser",
+      "severity": "CRITICAL",
+      "title": "BrowserAgent completely unimplemented - all methods return mock data",
+      "description": "The BrowserAgent has no Playwright integration. All navigation, extraction, interaction, and screenshot methods return simulated data. This breaks the researcher agent (which depends on web search) and makes the browser agent unusable.",
+      "impact": "Research agent cannot perform actual web research. Browser automation completely non-functional.",
+      "fix_effort": "HIGH",
+      "recommended_fix": "Implement full Playwright integration with browser lifecycle management, page navigation, data extraction, form interaction, JS execution, screenshot capture, and rate limiting."
+    },
+    {
+      "id": "CRIT-002",
+      "component": "agents/researcher",
+      "severity": "CRITICAL",
+      "title": "Researcher agent has no actual web search capability",
+      "description": "_search_web() returns empty list. All research methods just send prompts to LLM without any actual information retrieval.",
+      "impact": "Research agent cannot fulfill its core purpose of finding verifiable information with citations.",
+      "fix_effort": "HIGH",
+      "recommended_fix": "Integrate BrowserAgent for web search, add search engine API integration (SerpAPI, Brave Search), implement citation extraction and verification."
+    },
+    {
+      "id": "CRIT-003",
+      "component": "agents/coder",
+      "severity": "CRITICAL",
+      "title": "Coder agent cannot actually write files - _apply_changes() is a stub",
+      "description": "The _apply_changes() method only returns a summary count. No filesystem integration for reading/writing code. No code validation pipeline.",
+      "impact": "Coder agent cannot implement features, fix bugs, or create tests. Core coding functionality non-existent.",
+      "fix_effort": "HIGH",
+      "recommended_fix": "Integrate with fs_read/fs_write/fs_glob tools. Add syntax validation, linting, type checking. Auto-generate diffs. Run tests after changes."
+    },
+    {
+      "id": "CRIT-004",
+      "component": "agents/tester",
+      "severity": "HIGH",
+      "title": "Tester agent test execution and analysis is incomplete",
+      "description": "Test output parsing uses fragile regex. No multi-framework support. No coverage analysis. Failure analysis does not reproduce bugs.",
+      "impact": "Cannot reliably run tests or analyze failures. Testing workflow broken.",
+      "fix_effort": "MEDIUM",
+      "recommended_fix": "Use pytest --json-report for reliable parsing. Add multi-framework runners. Integrate coverage.py. Add bug reproduction sandbox."
+    },
+    {
+      "id": "CRIT-005",
+      "component": "runtime/agent_runtime",
+      "severity": "HIGH",
+      "title": "JSON parsing and repair for LLM responses is fragile",
+      "description": "_attempt_json_repair() uses basic regex. Structured output instruction adds many tokens. No handling of partial/streaming responses.",
+      "impact": "Agent executions frequently fail due to JSON parsing errors. Wasted API calls and tokens.",
+      "fix_effort": "MEDIUM",
+      "recommended_fix": "Use json-repair library. Use response_format parameter for structured output. Add streaming response handling."
+    },
+    {
+      "id": "CRIT-006",
+      "component": "tools/tool_manager",
+      "severity": "HIGH",
+      "title": "Terminal tool uses shell=True - command injection risk",
+      "description": "terminal_run tool uses subprocess with shell=True. Command guard helps but shell=True bypasses argument separation.",
+      "impact": "Potential command injection if command guard is bypassed or has gaps.",
+      "fix_effort": "LOW",
+      "recommended_fix": "Replace shell=True with shlex.split() and proper argument passing. Keep command guard as defense in depth."
+    },
+    {
+      "id": "CRIT-007",
+      "component": "observability/logger",
+      "severity": "MEDIUM",
+      "title": "Log files never rotated - will grow indefinitely",
+      "description": "FileHandler created without rotation. Long-running systems will fill disk.",
+      "impact": "Disk space exhaustion in production.",
+      "fix_effort": "LOW",
+      "recommended_fix": "Use RotatingFileHandler or TimedRotatingFileHandler with maxBytes/backupCount."
+    },
+    {
+      "id": "CRIT-008",
+      "component": "cli.py",
+      "severity": "MEDIUM",
+      "title": "Multiple asyncio.run() calls in CLI commands cause event loop issues",
+      "description": "Each CLI command calls asyncio.run() for initialize, then again for shutdown. Nested event loops not supported.",
+      "impact": "Runtime errors in some Python versions. Resource leaks.",
+      "fix_effort": "LOW",
+      "recommended_fix": "Use single event loop per CLI invocation. Create async main() and run once."
+    }
+  ],
+  "recommended_improvements": [
+    {
+      "priority": "P0",
+      "area": "Core Agent Functionality",
+      "items": [
+        "Implement BrowserAgent with Playwright",
+        "Integrate web search into ResearcherAgent",
+        "Implement file read/write in CoderAgent",
+        "Add code validation pipeline (syntax, lint, types)",
+        "Fix JSON parsing with json-repair library"
+      ]
+    },
+    {
+      "priority": "P1",
+      "area": "Testing & Quality",
+      "items": [
+        "Add integration tests with test containers",
+        "Implement end-to-end workflow tests",
+        "Set up CI/CD with coverage reporting",
+        "Target >80% coverage for critical paths",
+        "Add provider contract tests"
+      ]
+    },
+    {
+      "priority": "P1",
+      "area": "Security Hardening",
+      "items": [
+        "Replace shell=True in terminal tool",
+        "Implement AST-based command analysis",
+        "Add allowlist mode for command guard",
+        "Add tool execution sandboxing",
+        "Implement fine-grained permissions"
+      ]
+    },
+    {
+      "priority": "P2",
+      "area": "Observability & Operations",
+      "items": [
+        "Add log rotation",
+        "Implement Prometheus metrics export",
+        "Add distributed tracing correlation IDs",
+        "Add routing analytics dashboard",
+        "Implement workflow checkpointing"
+      ]
+    },
+    {
+      "priority": "P2",
+      "area": "Configuration & Maintainability",
+      "items": [
+        "Consolidate model/fallback config (models.yaml + routing.yaml)",
+        "Add config schema validation with Pydantic",
+        "Support environment variable interpolation",
+        "Add hot-reload for configuration",
+        "Implement config versioning/migration"
+      ]
+    },
+    {
+      "priority": "P3",
+      "area": "Advanced Features",
+      "items": [
+        "Add semantic code search with embeddings",
+        "Implement GitHub API integration (PyGithub)",
+        "Add incremental security scanning",
+        "Support multi-framework test runners",
+        "Add model capability auto-detection"
+      ]
+    }
+  ],
+  "priority_fixes": [
+    {
+      "rank": 1,
+      "issue_id": "CRIT-001",
+      "title": "Implement BrowserAgent with Playwright",
+      "estimated_days": 5,
+      "dependencies": [
+        "Playwright installation",
+        "Browser dependencies"
+      ]
+    },
+    {
+      "rank": 2,
+      "issue_id": "CRIT-002",
+      "title": "Integrate web search into ResearcherAgent",
+      "estimated_days": 3,
+      "dependencies": [
+        "CRIT-001 (BrowserAgent)",
+        "Search API keys (SerpAPI/Brave)"
+      ]
+    },
+    {
+      "rank": 3,
+      "issue_id": "CRIT-003",
+      "title": "Implement file operations in CoderAgent",
+      "estimated_days": 4,
+      "dependencies": [
+        "fs_read/fs_write tools (exist)",
+        "Code validation tools"
+      ]
+    },
+    {
+      "rank": 4,
+      "issue_id": "CRIT-005",
+      "title": "Fix JSON parsing with json-repair library",
+      "estimated_days": 1,
+      "dependencies": [
+        "Add json-repair dependency"
+      ]
+    },
+    {
+      "rank": 5,
+      "issue_id": "CRIT-006",
+      "title": "Replace shell=True in terminal tool",
+      "estimated_days": 1,
+      "dependencies": [
+        "None - internal refactor"
+      ]
+    },
+    {
+      "rank": 6,
+      "issue_id": "CRIT-007",
+      "title": "Add log rotation",
+      "estimated_days": 0.5,
+      "dependencies": [
+        "None - config change"
+      ]
+    },
+    {
+      "rank": 7,
+      "issue_id": "CRIT-008",
+      "title": "Fix CLI asyncio.run() usage",
+      "estimated_days": 0.5,
+      "dependencies": [
+        "None - refactor"
+      ]
+    },
+    {
+      "rank": 8,
+      "issue_id": "CRIT-004",
+      "title": "Improve TesterAgent test execution",
+      "estimated_days": 3,
+      "dependencies": [
+        "pytest-json-report",
+        "coverage.py"
+      ]
+    }
+  ],
+  "production_readiness_score": {
+    "overall": 45,
+    "architecture": 85,
+    "core_functionality": 35,
+    "security": 70,
+    "observability": 60,
+    "testing": 25,
+    "documentation": 75,
+    "configuration": 90
+  },
+  "estimated_effort_to_production": {
+    "critical_fixes_days": 21,
+    "recommended_improvements_days": 40,
+    "total_estimated_days": 61,
+    "team_size_recommended": 3
+  }
+}

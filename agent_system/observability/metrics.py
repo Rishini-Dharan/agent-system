@@ -179,10 +179,10 @@ class MetricsCollector:
     def record_tool_call(
         self,
         tool_name: str,
-        agent: str,
-        task_id: str,
-        duration_ms: int,
-        success: bool,
+        agent: str = "unknown",
+        task_id: str = "unknown",
+        duration_ms: int = 0,
+        success: bool = True,
         error: Optional[str] = None,
     ) -> None:
         """Record a tool call."""

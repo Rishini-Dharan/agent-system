@@ -57,6 +57,8 @@ dependencies = [
     # Utilities
     "tenacity>=8.2",
     "orjson>=3.10",
+    "json-repair>=0.1",
+    "shlex>=0.1",
 ]
 
 [project.optional-dependencies]

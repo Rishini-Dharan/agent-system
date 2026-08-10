@@ -409,6 +409,92 @@ class BuiltinTools:
             category="testing",
             timeout_seconds=180,
         )
+        
+        # Browser tools
+        tool_manager.register(
+            name="browser_navigate",
+            description="Navigate to a URL and extract page content using Playwright",
+            parameters={
+                "type": "object",
+                "properties": {
+                    "url": {"type": "string", "description": "URL to navigate to"},
+                    "wait_for": {"type": "string", "description": "Wait condition", "default": "networkidle", "enum": ["load", "domcontentloaded", "networkidle"]},
+                    "timeout": {"type": "integer", "description": "Timeout in milliseconds", "default": 30000},
+                },
+                "required": ["url"],
+            },
+            handler=BuiltinTools._browser_navigate,
+            required_permission=PermissionLevel.READ_ONLY,
+            category="browser",
+            timeout_seconds=60,
+        )
+        
+        tool_manager.register(
+            name="browser_extract",
+            description="Extract data from a page using CSS selectors",
+            parameters={
+                "type": "object",
+                "properties": {
+                    "url": {"type": "string", "description": "URL to navigate to"},
+                    "selectors": {"type": "object", "description": "CSS selectors to extract", "additionalProperties": {"type": "string"}},
+                    "wait_for": {"type": "string", "description": "Wait condition", "default": "networkidle"},
+                    "timeout": {"type": "integer", "description": "Timeout in milliseconds", "default": 30000},
+                },
+                "required": ["url"],
+            },
+            handler=BuiltinTools._browser_extract,
+            required_permission=PermissionLevel.READ_ONLY,
+            category="browser",
+            timeout_seconds=60,
+        )
+        
+        tool_manager.register(
+            name="browser_screenshot",
+            description="Take a screenshot of a page",
+            parameters={
+                "type": "object",
+                "properties": {
+                    "url": {"type": "string", "description": "URL to navigate to"},
+                    "path": {"type": "string", "description": "Output file path", "default": "screenshot.png"},
+                    "full_page": {"type": "boolean", "description": "Capture full page", "default": True},
+                    "wait_for": {"type": "string", "description": "Wait condition", "default": "networkidle"},
+                    "timeout": {"type": "integer", "description": "Timeout in milliseconds", "default": 30000},
+                },
+                "required": ["url"],
+            },
+            handler=BuiltinTools._browser_screenshot,
+            required_permission=PermissionLevel.SAFE_WRITE,
+            category="browser",
+            timeout_seconds=60,
+        )
+        
+        tool_manager.register(
+            name="browser_interact",
+            description="Interact with page elements (click, fill, select, etc.)",
+            parameters={
+                "type": "object",
+                "properties": {
+                    "url": {"type": "string", "description": "URL to navigate to"},
+                    "actions": {"type": "array", "description": "List of actions to perform", "items": {
+                        "type": "object",
+                        "properties": {
+                            "type": {"type": "string", "description": "Action type", "enum": ["click", "fill", "select", "hover", "wait", "eval"]},
+                            "selector": {"type": "string", "description": "CSS selector"},
+                            "value": {"type": "string", "description": "Value for fill/select"},
+                            "script": {"type": "string", "description": "Script for eval action"},
+                        },
+                        "required": ["type", "selector"],
+                    }},
+                    "wait_for": {"type": "string", "description": "Wait condition", "default": "networkidle"},
+                    "timeout": {"type": "integer", "description": "Timeout in milliseconds", "default": 30000},
+                },
+                "required": ["url", "actions"],
+            },
+            handler=BuiltinTools._browser_interact,
+            required_permission=PermissionLevel.SAFE_WRITE,
+            category="browser",
+            timeout_seconds=120,
+        )
     
     # Filesystem handlers
     @staticmethod
@@ -500,6 +586,7 @@ class BuiltinTools:
     @staticmethod
     def _terminal_run(command: str, cwd: str = ".", timeout: int = 60) -> Dict[str, Any]:
         import subprocess
+        import shlex
         
         workspace = Path.cwd().resolve()
         work_dir = (workspace / cwd).resolve()
@@ -508,9 +595,11 @@ class BuiltinTools:
             return {"error": "Working directory outside workspace"}
         
         try:
+            # Split command safely without shell=True
+            args = shlex.split(command)
             result = subprocess.run(
-                command,
-                shell=True,
+                args,
+                shell=False,
                 cwd=work_dir,
                 capture_output=True,
                 text=True,
@@ -662,5 +751,175 @@ class BuiltinTools:
             }
         except subprocess.TimeoutExpired:
             return {"error": "Tests timed out after 180s"}
+        except Exception as e:
+            return {"error": str(e)}
+    
+    # Browser handlers
+    @staticmethod
+    async def _browser_navigate(url: str, wait_for: str = "networkidle", timeout: int = 30000) -> Dict[str, Any]:
+        """Navigate to a URL and extract page content."""
+        try:
+            from playwright.async_api import async_playwright
+            
+            async with async_playwright() as p:
+                browser = await p.chromium.launch(headless=True, args=["--no-sandbox", "--disable-setuid-sandbox"])
+                context = await browser.new_context(viewport={"width": 1280, "height": 720})
+                page = await context.new_page()
+                
+                await page.goto(url, wait_until=wait_for, timeout=timeout)
+                
+                title = await page.title()
+                content = await page.content()
+                text_content = await page.evaluate("() => document.body.innerText")
+                if len(text_content) > 5000:
+                    text_content = text_content[:5000] + "... [truncated]"
+                
+                await browser.close()
+                
+                return {
+                    "success": True,
+                    "url": url,
+                    "title": title,
+                    "text_content": text_content,
+                    "content_length": len(content),
+                }
+        except Exception as e:
+            return {"error": str(e)}
+    
+    @staticmethod
+    async def _browser_extract(url: str, selectors: Dict[str, str] = None, wait_for: str = "networkidle", timeout: int = 30000) -> Dict[str, Any]:
+        """Extract data from a page using CSS selectors."""
+        try:
+            from playwright.async_api import async_playwright
+            
+            selectors = selectors or {}
+            
+            async with async_playwright() as p:
+                browser = await p.chromium.launch(headless=True, args=["--no-sandbox", "--disable-setuid-sandbox"])
+                context = await browser.new_context(viewport={"width": 1280, "height": 720})
+                page = await context.new_page()
+                
+                await page.goto(url, wait_until=wait_for, timeout=timeout)
+                
+                extracted_data = {"url": url}
+                
+                for key, selector in selectors.items():
+                    try:
+                        elements = await page.query_selector_all(selector)
+                        if elements:
+                            if len(elements) == 1:
+                                extracted_data[key] = await elements[0].inner_text()
+                            else:
+                                extracted_data[key] = [await el.inner_text() for el in elements]
+                        else:
+                            extracted_data[key] = None
+                    except Exception as e:
+                        extracted_data[key] = f"Error: {str(e)}"
+                
+                # Also extract all links
+                try:
+                    links = await page.evaluate("""
+                        () => Array.from(document.querySelectorAll('a[href]')).map(a => ({
+                            text: a.innerText.trim(),
+                            href: a.href
+                        })).slice(0, 50)
+                    """)
+                    extracted_data["links"] = links
+                except Exception:
+                    pass
+                
+                await browser.close()
+                
+                return {
+                    "success": True,
+                    "extracted_data": extracted_data,
+                }
+        except Exception as e:
+            return {"error": str(e)}
+    
+    @staticmethod
+    async def _browser_screenshot(url: str, path: str = "screenshot.png", full_page: bool = True, wait_for: str = "networkidle", timeout: int = 30000) -> Dict[str, Any]:
+        """Take a screenshot of a page."""
+        import base64
+        from pathlib import Path
+        
+        try:
+            from playwright.async_api import async_playwright
+            
+            async with async_playwright() as p:
+                browser = await p.chromium.launch(headless=True, args=["--no-sandbox", "--disable-setuid-sandbox"])
+                context = await browser.new_context(viewport={"width": 1280, "height": 720})
+                page = await context.new_page()
+                
+                await page.goto(url, wait_until=wait_for, timeout=timeout)
+                
+                # Ensure directory exists
+                Path(path).parent.mkdir(parents=True, exist_ok=True)
+                
+                await page.screenshot(path=path, full_page=full_page)
+                screenshot_bytes = await page.screenshot(full_page=full_page)
+                screenshot_b64 = base64.b64encode(screenshot_bytes).decode()
+                
+                await browser.close()
+                
+                return {
+                    "success": True,
+                    "screenshot_path": path,
+                    "screenshot_base64": screenshot_b64,
+                }
+        except Exception as e:
+            return {"error": str(e)}
+    
+    @staticmethod
+    async def _browser_interact(url: str, actions: List[Dict[str, Any]], wait_for: str = "networkidle", timeout: int = 30000) -> Dict[str, Any]:
+        """Interact with page elements."""
+        try:
+            from playwright.async_api import async_playwright
+            
+            async with async_playwright() as p:
+                browser = await p.chromium.launch(headless=True, args=["--no-sandbox", "--disable-setuid-sandbox"])
+                context = await browser.new_context(viewport={"width": 1280, "height": 720})
+                page = await context.new_page()
+                
+                await page.goto(url, wait_until=wait_for, timeout=timeout)
+                
+                results = []
+                for action in actions:
+                    action_type = action.get("type", "")
+                    selector = action.get("selector", "")
+                    
+                    try:
+                        if action_type == "click":
+                            await page.click(selector, timeout=5000)
+                            results.append({"action": "click", "selector": selector, "result": "success"})
+                        elif action_type == "fill":
+                            value = action.get("value", "")
+                            await page.fill(selector, value, timeout=5000)
+                            results.append({"action": "fill", "selector": selector, "result": "success"})
+                        elif action_type == "select":
+                            value = action.get("value", "")
+                            await page.select_option(selector, value, timeout=5000)
+                            results.append({"action": "select", "selector": selector, "result": "success"})
+                        elif action_type == "hover":
+                            await page.hover(selector, timeout=5000)
+                            results.append({"action": "hover", "selector": selector, "result": "success"})
+                        elif action_type == "wait":
+                            await page.wait_for_selector(selector, timeout=10000)
+                            results.append({"action": "wait", "selector": selector, "result": "success"})
+                        elif action_type == "eval":
+                            script = action.get("script", "")
+                            result = await page.evaluate(script)
+                            results.append({"action": "eval", "result": result})
+                        else:
+                            results.append({"action": action_type, "selector": selector, "result": f"unknown action type: {action_type}"})
+                    except Exception as e:
+                        results.append({"action": action_type, "selector": selector, "result": f"error: {str(e)}"})
+                
+                await browser.close()
+                
+                return {
+                    "success": True,
+                    "interactions": results,
+                }
         except Exception as e:
             return {"error": str(e)}

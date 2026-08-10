@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import json
 import logging
+import logging.handlers
 import os
 import sys
 import threading
@@ -21,52 +22,8 @@ class StructuredLogger:
     
     def __init__(self, name: str):
         self.name = name
-        self._logger = self._create_logger(name)
+        self._logger = structlog.get_logger(name)
         self._context: Dict[str, Any] = {}
-    
-    def _create_logger(self, name: str) -> structlog.BoundLogger:
-        """Create a structured logger."""
-        # Configure structlog
-        structlog.configure(
-            processors=[
-                structlog.stdlib.filter_by_level,
-                structlog.stdlib.add_logger_name,
-                structlog.stdlib.add_log_level,
-                structlog.stdlib.PositionalArgumentsFormatter(),
-                structlog.processors.TimeStamper(fmt="iso"),
-                structlog.processors.StackInfoRenderer(),
-                structlog.processors.format_exc_info,
-                structlog.processors.UnicodeDecoder(),
-                structlog.processors.JSONRenderer(),
-            ],
-            context_class=dict,
-            logger_factory=structlog.stdlib.LoggerFactory(),
-            wrapper_class=structlog.stdlib.BoundLogger,
-            cache_logger_on_first_use=True,
-        )
-        
-        # Configure standard logging
-        log_level = os.getenv("LOG_LEVEL", "INFO").upper()
-        
-        # Create file handler
-        log_dir = Path(os.getcwd()) / "logs"
-        log_dir.mkdir(exist_ok=True)
-        
-        file_handler = logging.FileHandler(log_dir / f"{name}.log")
-        file_handler.setLevel(getattr(logging, log_level))
-        file_handler.setFormatter(logging.Formatter("%(message)s"))
-        
-        # Create console handler
-        console_handler = logging.StreamHandler(sys.stdout)
-        console_handler.setLevel(getattr(logging, log_level))
-        console_handler.setFormatter(logging.Formatter("%(message)s"))
-        
-        # Configure root logger
-        root_logger = logging.getLogger()
-        root_logger.setLevel(getattr(logging, log_level))
-        root_logger.handlers = [file_handler, console_handler]
-        
-        return structlog.get_logger(name)
     
     def bind(self, **kwargs) -> "StructuredLogger":
         """Bind context variables."""
@@ -237,6 +194,61 @@ class StructuredLogger:
 # Global logger cache
 _loggers: Dict[str, StructuredLogger] = {}
 _loggers_lock = threading.Lock()
+_structlog_configured = False
+
+
+def _configure_structlog_once(log_level: str, log_dir: Path) -> None:
+    """Configure structlog globally once with rotating file handlers."""
+    global _structlog_configured
+    
+    if _structlog_configured:
+        return
+    
+    log_level = log_level.upper()
+    
+    # Create log directory
+    log_dir.mkdir(exist_ok=True)
+    
+    # Create rotating file handler (10MB max, 5 backups)
+    file_handler = logging.handlers.RotatingFileHandler(
+        log_dir / "agent_system.log",
+        maxBytes=10 * 1024 * 1024,  # 10MB
+        backupCount=5,
+        encoding="utf-8",
+    )
+    file_handler.setLevel(getattr(logging, log_level))
+    file_handler.setFormatter(logging.Formatter("%(message)s"))
+    
+    # Create console handler
+    console_handler = logging.StreamHandler(sys.stdout)
+    console_handler.setLevel(getattr(logging, log_level))
+    console_handler.setFormatter(logging.Formatter("%(message)s"))
+    
+    # Configure root logger
+    root_logger = logging.getLogger()
+    root_logger.setLevel(getattr(logging, log_level))
+    root_logger.handlers = [file_handler, console_handler]
+    
+    # Configure structlog
+    structlog.configure(
+        processors=[
+            structlog.stdlib.filter_by_level,
+            structlog.stdlib.add_logger_name,
+            structlog.stdlib.add_log_level,
+            structlog.stdlib.PositionalArgumentsFormatter(),
+            structlog.processors.TimeStamper(fmt="iso", utc=True),
+            structlog.processors.StackInfoRenderer(),
+            structlog.processors.format_exc_info,
+            structlog.processors.UnicodeDecoder(),
+            structlog.processors.JSONRenderer(),
+        ],
+        context_class=dict,
+        logger_factory=structlog.stdlib.LoggerFactory(),
+        wrapper_class=structlog.stdlib.BoundLogger,
+        cache_logger_on_first_use=True,
+    )
+    
+    _structlog_configured = True
 
 
 def get_logger(name: str) -> StructuredLogger:
@@ -253,7 +265,16 @@ def configure_logging(log_level: str = "INFO", log_dir: Optional[str] = None) ->
     if log_dir:
         os.environ["LOG_DIR"] = log_dir
     
-    # Clear existing loggers to force reconfiguration
+    # Determine log directory
+    if log_dir:
+        log_path = Path(log_dir)
+    else:
+        log_path = Path(os.getcwd()) / "logs"
+    
+    # Configure structlog with rotation
+    _configure_structlog_once(log_level.upper(), log_path)
+    
+    # Clear existing loggers to force reconfiguration with new settings
     global _loggers
     with _loggers_lock:
         _loggers.clear()

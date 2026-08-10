@@ -5,11 +5,13 @@ Command-line interface for the agent system.
 from __future__ import annotations
 
 import asyncio
+import functools
 import json
 import os
 import subprocess
 import sys
 import uuid
+from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
@@ -91,6 +93,15 @@ class AgentSystemCLI:
             await self.execution_manager.shutdown()
         await close_db_manager()
         console.print("[bold yellow]Agent System shutdown complete.[/bold yellow]")
+    
+    @asynccontextmanager
+    async def lifecycle(self):
+        """Context manager for CLI lifecycle."""
+        await self.initialize()
+        try:
+            yield self
+        finally:
+            await self.shutdown()
     
     async def run_task(
         self,
@@ -430,22 +441,25 @@ def cli(ctx, log_level):
     ctx.obj["log_level"] = log_level
 
 
+# Async command wrapper
+def async_command(coro):
+    """Decorator to run async command with single event loop."""
+    @functools.wraps(coro)
+    def wrapper(*args, **kwargs):
+        return asyncio.run(coro(*args, **kwargs))
+    return wrapper
+
+
 @cli.command()
 @click.argument("objective")
 @click.option("--type", "task_type", default="custom", help="Task type")
 @click.option("--agent", help="Specific agent to use")
 @click.pass_context
-def run(ctx, objective: str, task_type: str, agent: str):
+@async_command
+async def run(ctx, objective: str, task_type: str, agent: str):
     """Run a single task."""
-    async def _run():
-        system = AgentSystemCLI()
-        await system.initialize()
-        try:
-            await system.run_task(objective, task_type, agent)
-        finally:
-            await system.shutdown()
-    
-    asyncio.run(_run())
+    async with AgentSystemCLI().lifecycle() as system:
+        await system.run_task(objective, task_type, agent)
 
 
 @cli.command()
@@ -453,106 +467,79 @@ def run(ctx, objective: str, task_type: str, agent: str):
 @click.argument("objective")
 @click.option("--steps", "steps_file", type=click.Path(exists=True), help="JSON file with workflow steps")
 @click.pass_context
-def workflow(ctx, name: str, objective: str, steps_file: str):
+@async_command
+async def workflow(ctx, name: str, objective: str, steps_file: str):
     """Run a multi-step workflow."""
-    async def _workflow():
-        # Load steps from file
-        with open(steps_file, "r") as f:
-            steps = json.load(f)
-        
-        system = AgentSystemCLI()
-        await system.initialize()
-        try:
-            await system.run_workflow(name, objective, steps)
-        finally:
-            await system.shutdown()
+    # Load steps from file
+    with open(steps_file, "r") as f:
+        steps = json.load(f)
     
-    asyncio.run(_workflow())
+    async with AgentSystemCLI().lifecycle() as system:
+        await system.run_workflow(name, objective, steps)
 
 
 @cli.command()
 @click.pass_context
-def status(ctx):
+@async_command
+async def status(ctx):
     """Show system status."""
-    system = AgentSystemCLI()
-    asyncio.run(system.initialize())
-    try:
+    async with AgentSystemCLI().lifecycle() as system:
         system.show_status()
-    finally:
-        asyncio.run(system.shutdown())
 
 
 @cli.command()
 @click.pass_context
-def agents(ctx):
+@async_command
+async def agents(ctx):
     """Show available agents."""
-    system = AgentSystemCLI()
-    asyncio.run(system.initialize())
-    try:
+    async with AgentSystemCLI().lifecycle() as system:
         system.show_agents()
-    finally:
-        asyncio.run(system.shutdown())
 
 
 @cli.command()
 @click.pass_context
-def models(ctx):
+@async_command
+async def models(ctx):
     """Show configured models."""
-    system = AgentSystemCLI()
-    asyncio.run(system.initialize())
-    try:
+    async with AgentSystemCLI().lifecycle() as system:
         system.show_models()
-    finally:
-        asyncio.run(system.shutdown())
 
 
 @cli.command()
 @click.option("--lines", "-n", default=50, help="Number of lines to show")
 @click.pass_context
-def logs(ctx, lines: int):
+@async_command
+async def logs(ctx, lines: int):
     """Show recent logs."""
-    system = AgentSystemCLI()
-    asyncio.run(system.initialize())
-    try:
+    async with AgentSystemCLI().lifecycle() as system:
         system.show_logs(lines)
-    finally:
-        asyncio.run(system.shutdown())
 
 
 @cli.command()
 @click.pass_context
-def test(ctx):
+@async_command
+async def test(ctx):
     """Run unit tests."""
-    system = AgentSystemCLI()
-    asyncio.run(system.initialize())
-    try:
-        asyncio.run(system.run_tests())
-    finally:
-        asyncio.run(system.shutdown())
+    async with AgentSystemCLI().lifecycle() as system:
+        await system.run_tests()
 
 
 @cli.command()
 @click.pass_context
-def doctor(ctx):
+@async_command
+async def doctor(ctx):
     """Run environment diagnostics."""
-    system = AgentSystemCLI()
-    asyncio.run(system.initialize())
-    try:
-        asyncio.run(system.doctor())
-    finally:
-        asyncio.run(system.shutdown())
+    async with AgentSystemCLI().lifecycle() as system:
+        await system.doctor()
 
 
 @cli.command()
 @click.pass_context
-def config(ctx):
+@async_command
+async def config(ctx):
     """Show current configuration."""
-    system = AgentSystemCLI()
-    asyncio.run(system.initialize())
-    try:
+    async with AgentSystemCLI().lifecycle() as system:
         system.show_config()
-    finally:
-        asyncio.run(system.shutdown())
 
 
 def main():
