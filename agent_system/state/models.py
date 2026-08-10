@@ -80,6 +80,7 @@ class SubTaskModel(Base):
     duration_ms = Column(Integer, nullable=False, default=0)
     retry_count = Column(Integer, nullable=False, default=0)
     depends_on = Column(JSON, nullable=False, default=[])
+    errors = Column(JSON, nullable=False, default=[])
     
     __table_args__ = (
         Index("ix_subtasks_parent_status", "parent_task_id", "status"),

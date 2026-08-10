@@ -18,7 +18,7 @@ class ConfigManager:
     def __init__(self, config_dir: Optional[Path] = None):
         if config_dir is None:
             # Default to config directory relative to this file
-            self.config_dir = Path(__file__).parent.parent.parent / "config"
+            self.config_dir = Path(__file__).parent.parent / "config"
         else:
             self.config_dir = config_dir
         

@@ -70,6 +70,7 @@ class SubTask(BaseModel):
     duration_ms: int = 0
     retry_count: int = 0
     depends_on: List[str] = Field(default_factory=list)
+    errors: List[str] = Field(default_factory=list)
 
 
 class WorkflowStep(BaseModel):

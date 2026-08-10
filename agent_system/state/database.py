@@ -236,6 +236,7 @@ class DatabaseManager:
         completed_at: Optional[datetime] = None,
         duration_ms: Optional[int] = None,
         retry_count: Optional[int] = None,
+        errors: Optional[List[str]] = None,
     ) -> bool:
         """Update a subtask."""
         async with self.session() as session:
@@ -252,6 +253,8 @@ class DatabaseManager:
                 values["duration_ms"] = duration_ms
             if retry_count is not None:
                 values["retry_count"] = retry_count
+            if errors is not None:
+                values["errors"] = errors
             
             if not values:
                 return False

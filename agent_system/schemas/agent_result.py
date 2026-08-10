@@ -244,6 +244,7 @@ class SubTask(BaseModel):
     duration_ms: int = 0
     retry_count: int = 0
     depends_on: List[str] = Field(default_factory=list)  # Other subtask IDs
+    errors: List[str] = Field(default_factory=list)
 
 
 class WorkflowState(BaseModel):
