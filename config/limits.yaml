@@ -1,0 +1,158 @@
+# Rate Limits and Cost Controls
+# All limits are configurable per provider, model, and agent
+
+limits:
+  # Global limits
+  global:
+    max_agent_calls_per_task: 50
+    max_parallel_agents: 4
+    max_retries: 3
+    max_context_tokens: 32768
+    max_output_tokens: 8192
+    request_timeout_seconds: 180
+    daily_request_limit: 1000
+    daily_token_limit: 1000000
+    max_task_duration_seconds: 1800
+
+  # Per-provider limits
+  providers:
+    nvidia:
+      requests_per_minute: 60
+      tokens_per_minute: 100000
+      max_concurrent_requests: 5
+      cost_per_1k_input_tokens: 0.0001
+      cost_per_1k_output_tokens: 0.0002
+      free_tier: false
+    
+    openrouter:
+      requests_per_minute: 100
+      tokens_per_minute: 200000
+      max_concurrent_requests: 10
+      cost_per_1k_input_tokens: 0.0
+      cost_per_1k_output_tokens: 0.0
+      free_tier: true
+      free_models:
+        - "deepseek/deepseek-chat"
+        - "deepseek/deepseek-coder"
+    
+    zai:
+      requests_per_minute: 60
+      tokens_per_minute: 100000
+      max_concurrent_requests: 5
+      cost_per_1k_input_tokens: 0.0
+      cost_per_1k_output_tokens: 0.0
+      free_tier: true
+    
+    google:
+      requests_per_minute: 60
+      tokens_per_minute: 250000
+      max_concurrent_requests: 10
+      cost_per_1k_input_tokens: 0.000125
+      cost_per_1k_output_tokens: 0.000375
+      free_tier: true
+      free_tier_limits:
+        requests_per_minute: 15
+        tokens_per_minute: 32000
+
+  # Per-agent limits
+  agents:
+    orchestrator:
+      max_calls_per_task: 20
+      max_retries: 3
+      timeout_seconds: 300
+      max_context_tokens: 32768
+      max_output_tokens: 8192
+    
+    researcher:
+      max_calls_per_task: 10
+      max_retries: 3
+      timeout_seconds: 180
+      max_context_tokens: 16384
+      max_output_tokens: 4096
+    
+    coder:
+      max_calls_per_task: 15
+      max_retries: 3
+      timeout_seconds: 300
+      max_context_tokens: 32768
+      max_output_tokens: 16384
+    
+    reviewer:
+      max_calls_per_task: 5
+      max_retries: 2
+      timeout_seconds: 180
+      max_context_tokens: 16384
+      max_output_tokens: 4096
+    
+    security:
+      max_calls_per_task: 5
+      max_retries: 2
+      timeout_seconds: 180
+      max_context_tokens: 16384
+      max_output_tokens: 4096
+    
+    tester:
+      max_calls_per_task: 10
+      max_retries: 3
+      timeout_seconds: 300
+      max_context_tokens: 16384
+      max_output_tokens: 8192
+    
+    github:
+      max_calls_per_task: 5
+      max_retries: 2
+      timeout_seconds: 180
+      max_context_tokens: 8192
+      max_output_tokens: 4096
+    
+    browser:
+      max_calls_per_task: 10
+      max_retries: 2
+      timeout_seconds: 180
+      max_context_tokens: 8192
+      max_output_tokens: 4096
+
+  # Retry configuration
+  retry:
+    base_delay_seconds: 1
+    max_delay_seconds: 60
+    exponential_base: 2
+    jitter: true
+    retry_on:
+      - "timeout"
+      - "rate_limit"
+      - "server_error"
+      - "connection_error"
+    do_not_retry_on:
+      - "invalid_request"
+      - "authentication_error"
+      - "permission_denied"
+      - "model_not_found"
+      - "context_length_exceeded"
+
+  # Fallback configuration
+  fallback:
+    enabled: true
+    max_fallbacks: 3
+    fallback_on:
+      - "rate_limit"
+      - "server_error"
+      - "model_unavailable"
+      - "timeout"
+    do_not_fallback_on:
+      - "invalid_request"
+      - "authentication_error"
+      - "permission_denied"
+    prefer_free_tier: true
+
+  # Cost tracking
+  cost_tracking:
+    enabled: true
+    alert_threshold_usd: 10.0
+    daily_budget_usd: 50.0
+    per_task_budget_usd: 5.0
+    track_by:
+      - "provider"
+      - "model"
+      - "agent"
+      - "task"

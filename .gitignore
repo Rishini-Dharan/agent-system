@@ -1,0 +1,83 @@
+# Environment files with secrets
+.env
+.env.local
+.env.*.local
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+scons_var/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+pip-wheel-metadata/
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+
+# State database
+state/*.db
+state/*.db-*
+state/*.sqlite
+state/*.sqlite-*
+
+# Test outputs
+tests/output/
+.coverage
+htmlcov/
+.pytest_cache/
+.tox/
+
+# Reports
+reports/
+
+# Temporary files
+*.tmp
+*.temp
+temp/
+
+# Cache
+.cache/
+.mypy_cache/
+.ruff_cache/
+
+# Agent artifacts (generated code, etc.)
+artifacts/
+*.patch
+*.diff
+
+# Local development overrides
+config/local.yaml
+config/*.local.yaml

@@ -1,0 +1,183 @@
+# Model Routing Configuration
+# Defines how tasks are routed to agents and models
+
+routing:
+  # Task type to agent mapping
+  task_routes:
+    "research":
+      primary_agent: "researcher"
+      fallback_agents: ["orchestrator", "browser"]
+      complexity_threshold: "low"
+    
+    "code_implement":
+      primary_agent: "coder"
+      fallback_agents: ["tester", "orchestrator"]
+      complexity_threshold: "medium"
+    
+    "code_review":
+      primary_agent: "reviewer"
+      fallback_agents: ["security", "orchestrator"]
+      complexity_threshold: "medium"
+    
+    "security_scan":
+      primary_agent: "security"
+      fallback_agents: ["reviewer", "orchestrator"]
+      complexity_threshold: "low"
+    
+    "testing":
+      primary_agent: "tester"
+      fallback_agents: ["coder", "orchestrator"]
+      complexity_threshold: "medium"
+    
+    "github_ops":
+      primary_agent: "github"
+      fallback_agents: ["orchestrator", "coder"]
+      complexity_threshold: "low"
+    
+    "web_browse":
+      primary_agent: "browser"
+      fallback_agents: ["researcher", "orchestrator"]
+      complexity_threshold: "low"
+    
+    "planning":
+      primary_agent: "orchestrator"
+      fallback_agents: ["reviewer", "researcher"]
+      complexity_threshold: "high"
+    
+    "debugging":
+      primary_agent: "coder"
+      fallback_agents: ["tester", "orchestrator"]
+      complexity_threshold: "high"
+    
+    "architecture":
+      primary_agent: "orchestrator"
+      fallback_agents: ["reviewer", "coder"]
+      complexity_threshold: "high"
+
+  # Complexity-based model selection
+  complexity_routing:
+    low:
+      preferred_providers: ["openrouter", "google"]
+      max_tokens: 4096
+      temperature: 0.2
+    
+    medium:
+      preferred_providers: ["nvidia", "zai", "openrouter"]
+      max_tokens: 8192
+      temperature: 0.2
+    
+    high:
+      preferred_providers: ["nvidia", "zai"]
+      max_tokens: 16384
+      temperature: 0.1
+
+  # Capability requirements
+  capability_requirements:
+    tool_calling:
+      required_providers: ["nvidia", "openrouter", "zai"]
+      exclude_providers: []
+    
+    structured_output:
+      required_providers: ["nvidia", "openrouter", "zai"]
+      exclude_providers: ["google"]
+    
+    large_context:
+      min_context_window: 32768
+      preferred_models: ["glm-4.5", "gemini-1.5-pro", "nemotron-3-ultra"]
+    
+    web_search:
+      required_agents: ["researcher", "browser"]
+    
+    code_execution:
+      required_agents: ["coder", "tester"]
+    
+    git_operations:
+      required_agents: ["github"]
+
+  # Fallback chains (provider -> model)
+  fallback_chains:
+    orchestrator:
+      - provider: "nvidia"
+        model: "nvidia/nemotron-3-ultra"
+      - provider: "openrouter"
+        model: "deepseek/deepseek-chat"
+      - provider: "zai"
+        model: "glm-4.5"
+      - provider: "google"
+        model: "gemini-1.5-pro"
+    
+    researcher:
+      - provider: "openrouter"
+        model: "deepseek/deepseek-chat"
+      - provider: "google"
+        model: "gemini-1.5-pro"
+      - provider: "nvidia"
+        model: "nvidia/nemotron-3-ultra"
+    
+    coder:
+      - provider: "zai"
+        model: "glm-4.5"
+      - provider: "openrouter"
+        model: "deepseek/deepseek-coder"
+      - provider: "google"
+        model: "gemini-1.5-pro"
+      - provider: "nvidia"
+        model: "nvidia/nemotron-3-ultra"
+    
+    reviewer:
+      - provider: "nvidia"
+        model: "nvidia/nemotron-3-ultra"
+      - provider: "openrouter"
+        model: "deepseek/deepseek-chat"
+      - provider: "zai"
+        model: "glm-4.5"
+    
+    security:
+      - provider: "openrouter"
+        model: "deepseek/deepseek-chat"
+      - provider: "nvidia"
+        model: "nvidia/nemotron-3-ultra"
+      - provider: "google"
+        model: "gemini-1.5-pro"
+    
+    tester:
+      - provider: "google"
+        model: "gemini-1.5-pro"
+      - provider: "zai"
+        model: "glm-4.5"
+      - provider: "openrouter"
+        model: "deepseek/deepseek-chat"
+    
+    github:
+      - provider: "openrouter"
+        model: "deepseek/deepseek-chat"
+      - provider: "nvidia"
+        model: "nvidia/nemotron-3-ultra"
+    
+    browser:
+      - provider: "google"
+        model: "gemini-1.5-flash"
+      - provider: "google"
+        model: "gemini-1.5-pro"
+      - provider: "openrouter"
+        model: "deepseek/deepseek-chat"
+
+  # Parallel execution rules
+  parallel_execution:
+    independent_task_types:
+      - "research"
+      - "security_scan"
+      - "code_review"
+    
+    dependent_task_types:
+      - "code_implement"
+      - "testing"
+      - "github_ops"
+    
+    max_parallel_by_type:
+      research: 3
+      security_scan: 2
+      code_review: 1
+      code_implement: 2
+      testing: 2
+      web_browse: 2

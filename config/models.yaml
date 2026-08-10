@@ -1,0 +1,125 @@
+# Model Configuration
+# All model IDs are configurable - update as providers change their offerings
+
+models:
+  # Orchestrator - complex reasoning, planning, task decomposition
+  orchestrator:
+    provider: "nvidia"
+    model: "nvidia/nemotron-3-ultra"
+    temperature: 0.3
+    max_tokens: 8192
+    timeout: 120
+    capabilities: ["reasoning", "planning", "tool_calling", "structured_output"]
+
+  # Researcher - web search, documentation analysis, comparison
+  researcher:
+    provider: "openrouter"
+    model: "deepseek/deepseek-chat"
+    temperature: 0.2
+    max_tokens: 8192
+    timeout: 120
+    capabilities: ["web_search", "analysis", "summarization", "tool_calling"]
+
+  # Coder - implementation, refactoring, debugging, test creation
+  coder:
+    provider: "zai"
+    model: "glm-4.5"
+    temperature: 0.2
+    max_tokens: 16384
+    timeout: 180
+    capabilities: ["coding", "tool_calling", "structured_output", "large_context"]
+
+  # Reviewer - code review, bug detection, security analysis
+  reviewer:
+    provider: "nvidia"
+    model: "nvidia/nemotron-3-ultra"
+    temperature: 0.1
+    max_tokens: 8192
+    timeout: 120
+    capabilities: ["reasoning", "code_analysis", "security_review", "structured_output"]
+
+  # Security Agent - vulnerability analysis, secret detection
+  security:
+    provider: "openrouter"
+    model: "deepseek/deepseek-chat"
+    temperature: 0.1
+    max_tokens: 8192
+    timeout: 120
+    capabilities: ["security_analysis", "vulnerability_assessment", "tool_calling"]
+
+  # Tester - test creation, execution, failure analysis
+  tester:
+    provider: "google"
+    model: "gemini-1.5-pro"
+    temperature: 0.2
+    max_tokens: 8192
+    timeout: 120
+    capabilities: ["testing", "debugging", "tool_calling", "large_context"]
+
+  # GitHub Agent - repository operations, PR management
+  github:
+    provider: "openrouter"
+    model: "deepseek/deepseek-chat"
+    temperature: 0.2
+    max_tokens: 8192
+    timeout: 120
+    capabilities: ["git_operations", "github_api", "tool_calling"]
+
+  # Browser Agent - web navigation, data extraction
+  browser:
+    provider: "google"
+    model: "gemini-1.5-flash"
+    temperature: 0.2
+    max_tokens: 8192
+    timeout: 120
+    capabilities: ["browser_automation", "web_extraction", "tool_calling"]
+
+# Provider configurations
+providers:
+  nvidia:
+    base_url: "https://integrate.api.nvidia.com/v1"
+    api_key_env: "NVIDIA_API_KEY"
+    models_endpoint: "/models"
+    chat_endpoint: "/chat/completions"
+    supports_streaming: true
+    supports_tools: true
+    supports_structured_output: true
+    rate_limit_rpm: 60
+    rate_limit_tpm: 100000
+
+  openrouter:
+    base_url: "https://openrouter.ai/api/v1"
+    api_key_env: "OPENROUTER_API_KEY"
+    models_endpoint: "/models"
+    chat_endpoint: "/chat/completions"
+    supports_streaming: true
+    supports_tools: true
+    supports_structured_output: true
+    rate_limit_rpm: 100
+    rate_limit_tpm: 200000
+    extra_headers:
+      HTTP-Referer: "https://agent-system.local"
+      X-Title: "Agent System"
+
+  zai:
+    base_url: "https://api.z.ai/v1"
+    api_key_env: "ZAI_API_KEY"
+    models_endpoint: "/models"
+    chat_endpoint: "/chat/completions"
+    supports_streaming: true
+    supports_tools: true
+    supports_structured_output: true
+    rate_limit_rpm: 60
+    rate_limit_tpm: 100000
+
+  google:
+    base_url: "https://generativelanguage.googleapis.com/v1beta"
+    api_key_env: "GOOGLE_API_KEY"
+    models_endpoint: "/models"
+    chat_endpoint: "/models/{model}:generateContent"
+    supports_streaming: true
+    supports_tools: true
+    supports_structured_output: false
+    rate_limit_rpm: 60
+    rate_limit_tpm: 250000
+    use_native_sdk: true
